@@ -28,7 +28,9 @@ import io.horizen.lambo.car.api.request.CreateCarSellOrderRequest;
 import io.horizen.lambo.car.api.request.SpendCarSellOrderRequest;
 import io.horizen.lambo.car.box.CarBox;
 import io.horizen.lambo.car.box.CarSellOrderBox;
+import io.horizen.lambo.car.box.MTOBox;
 import io.horizen.lambo.car.box.data.CarBoxData;
+import io.horizen.lambo.car.box.data.MTOBoxData;
 import io.horizen.lambo.car.info.CarBuyOrderInfo;
 import io.horizen.lambo.car.info.CarSellOrderInfo;
 import io.horizen.lambo.car.proof.SellOrderSpendingProof;
@@ -98,7 +100,20 @@ public class CarApi extends ApplicationApiGroup {
             PublicKey25519Proposition carOwnershipProposition = PublicKey25519PropositionSerializer.getSerializer()
                     .parseBytes(BytesUtils.fromHexString(ent.proposition));
 
-            String ownerPublicKey = ent.proposition;
+            PublicKey25519Proposition mtoOwnershipProposition = PublicKey25519PropositionSerializer.getSerializer()
+                    .parseBytes(BytesUtils.fromHexString(ent.proposition));
+
+            MTOBox mtoBox = null;
+            MTOBoxData mtoBoxData = null;
+
+            for (Box b : view.getNodeWallet().boxesOfType(MTOBox.class)) {
+                if (Arrays.equals(b.id(), BytesUtils.fromHexString(ent.proposition)))
+                    mtoBox = (MTOBox) b;
+            }
+
+            if(null == mtoBox) {
+                mtoBoxData = new MTOBoxData(mtoOwnershipProposition, ent.proposition, 0);
+            }
 
             //check that the vin is unique (both in local veichle store and in mempool)
             if (! carInfoDBService.validateVin(ent.vin, Optional.of(view.getNodeMemoryPool()))){
@@ -155,7 +170,7 @@ public class CarApi extends ApplicationApiGroup {
                     regularOutputs,
                     carBoxData,
                     ent.fee,
-                    timestamp, ownerPublicKey);
+                    timestamp, mtoBoxData);
 
             // Get the Tx message to be signed.
             byte[] messageToSign = unsignedTransaction.messageToSign();
@@ -173,7 +188,7 @@ public class CarApi extends ApplicationApiGroup {
                     regularOutputs,
                     carBoxData,
                     ent.fee,
-                    timestamp, ownerPublicKey);
+                    timestamp, mtoBoxData);
 
             return new TxResponse(ByteUtils.toHexString(sidechainTransactionsCompanion.toBytes((BoxTransaction) signedTransaction)));
         }

@@ -14,6 +14,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
 import io.horizen.lambo.car.box.data.MTOBoxData;
+import io.horizen.lambo.car.box.data.MTOBoxDataSerializer;
 import scorex.core.NodeViewModifier$;
 
 import java.io.ByteArrayOutputStream;
@@ -32,7 +33,7 @@ import static io.horizen.lambo.car.transaction.CarRegistryTransactionsIdsEnum.Ca
 public final class CarDeclarationTransaction extends AbstractRegularTransaction {
 
     private final CarBoxData outputCarBoxData;
-    private final String ownerPublicKey;
+    private final MTOBoxData outputMTOBoxData;
     private List<NoncedBox<Proposition>> newBoxes;
 
     public CarDeclarationTransaction(List<byte[]> inputRegularBoxIds,
@@ -40,10 +41,10 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
                                      List<RegularBoxData> outputRegularBoxesData,
                                      CarBoxData outputCarBoxData,
                                      long fee,
-                                     long timestamp, String ownerPublicKey) {
+                                     long timestamp, MTOBoxData mtoBoxData) {
         super(inputRegularBoxIds, inputRegularBoxProofs, outputRegularBoxesData, fee, timestamp);
         this.outputCarBoxData = outputCarBoxData;
-        this.ownerPublicKey = ownerPublicKey;
+        this.outputMTOBoxData = mtoBoxData;
     }
 
     // Specify the unique custom transaction id.
@@ -64,8 +65,7 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
             //Also add MTOBox with 0 balance
             //TODO - Check if MTOBox already exists and if yes don't create a new box
             long mtoBoxNonce = getNewBoxNonce(outputCarBoxData.proposition(), newBoxes.size());
-            MTOBoxData tokenBoxData = new MTOBoxData(outputCarBoxData.proposition(), ownerPublicKey, 0);
-            newBoxes.add((NoncedBox) new MTOBox(tokenBoxData, mtoBoxNonce));
+            newBoxes.add((NoncedBox) new MTOBox(outputMTOBoxData, mtoBoxNonce));
         }
         return Collections.unmodifiableList(newBoxes);
     }
@@ -85,7 +85,7 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
 
         byte[] outputCarBoxDataBytes = outputCarBoxData.bytes();
 
-        byte[] ownerPublicKeyBytes = ownerPublicKey.getBytes();
+        byte[] outputMTOBoxDataBytes = outputMTOBoxData.bytes();
 
         return Bytes.concat(
                 Longs.toByteArray(fee()),                               // 8 bytes
@@ -98,8 +98,8 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
                 outputRegularBoxesDataBytes,                            // depends on previous value (>=4 bytes)
                 Ints.toByteArray(outputCarBoxDataBytes.length),         // 4 bytes
                 outputCarBoxDataBytes,                                   // depends on previous value (>=4 bytes)
-                Ints.toByteArray(ownerPublicKeyBytes.length),
-                ownerPublicKeyBytes
+                Ints.toByteArray(outputMTOBoxDataBytes.length),
+                outputMTOBoxDataBytes
         );
     }
 
@@ -143,9 +143,9 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);
-        String ownerPublicKey = new String(Arrays.copyOfRange(bytes, offset, offset+batchSize));
+        MTOBoxData outputMTOBoxData = MTOBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, offset, offset+batchSize));
 
-        return new CarDeclarationTransaction(inputRegularBoxIds, inputRegularBoxProofs, outputRegularBoxesData, outputCarBoxData, fee, timestamp, ownerPublicKey);
+        return new CarDeclarationTransaction(inputRegularBoxIds, inputRegularBoxProofs, outputRegularBoxesData, outputCarBoxData, fee, timestamp, outputMTOBoxData);
     }
 
     // Set specific Serializer for CarDeclarationTransaction class.
