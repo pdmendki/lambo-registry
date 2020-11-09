@@ -62,9 +62,10 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
             newBoxes.add((NoncedBox) new CarBox(outputCarBoxData, nonce));
 
             //Also add MTOBox with 0 balance
-            long nonce1 = getNewBoxNonce(outputCarBoxData.proposition(), newBoxes.size());
+            //TODO - Check if MTOBox already exists and if yes don't create a new box
+            long mtoBoxNonce = getNewBoxNonce(outputCarBoxData.proposition(), newBoxes.size());
             MTOBoxData tokenBoxData = new MTOBoxData(outputCarBoxData.proposition(), ownerPublicKey, 0);
-            newBoxes.add((NoncedBox) new MTOBox(tokenBoxData, nonce));
+            newBoxes.add((NoncedBox) new MTOBox(tokenBoxData, mtoBoxNonce));
         }
         return Collections.unmodifiableList(newBoxes);
     }
