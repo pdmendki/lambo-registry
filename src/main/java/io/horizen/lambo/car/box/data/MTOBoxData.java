@@ -90,7 +90,7 @@ public final class MTOBoxData extends AbstractNoncedBoxData<PublicKey25519Propos
         String id = new String(Arrays.copyOfRange(bytes, offset, offset + size));
         offset += size;
 
-        long balance = Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, offset + Ints.BYTES));
+        long balance = Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, offset + Longs.BYTES));
 
         return new MTOBoxData(proposition, id, balance);
     }

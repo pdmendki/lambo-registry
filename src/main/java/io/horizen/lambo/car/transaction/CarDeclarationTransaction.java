@@ -143,6 +143,8 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
         MTOBoxData outputMTOBoxData = MTOBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, offset, offset+batchSize));
 
         return new CarDeclarationTransaction(inputRegularBoxIds, inputRegularBoxProofs, outputRegularBoxesData, outputCarBoxData, fee, timestamp, outputMTOBoxData);
