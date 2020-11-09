@@ -3,7 +3,8 @@ package io.horizen.lambo.car.transaction;
 public enum CarRegistryTransactionsIdsEnum {
     CarDeclarationTransactionId((byte)1),
     SellCarTransactionId((byte)2),
-    BuyCarTransactionId((byte)3);
+    BuyCarTransactionId((byte)3),
+    EarnTokenTransactionId((byte)4);
 
     private final byte id;
 

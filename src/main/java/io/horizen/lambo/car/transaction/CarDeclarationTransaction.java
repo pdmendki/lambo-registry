@@ -6,12 +6,14 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.data.RegularBoxData;
 import io.horizen.lambo.car.box.CarBox;
+import io.horizen.lambo.car.box.MTOBox;
 import io.horizen.lambo.car.box.data.CarBoxData;
 import io.horizen.lambo.car.box.data.CarBoxDataSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
+import io.horizen.lambo.car.box.data.MTOBoxData;
 import scorex.core.NodeViewModifier$;
 
 import java.io.ByteArrayOutputStream;
@@ -30,6 +32,7 @@ import static io.horizen.lambo.car.transaction.CarRegistryTransactionsIdsEnum.Ca
 public final class CarDeclarationTransaction extends AbstractRegularTransaction {
 
     private final CarBoxData outputCarBoxData;
+    private final String ownerPublicKey;
     private List<NoncedBox<Proposition>> newBoxes;
 
     public CarDeclarationTransaction(List<byte[]> inputRegularBoxIds,
@@ -37,9 +40,10 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
                                      List<RegularBoxData> outputRegularBoxesData,
                                      CarBoxData outputCarBoxData,
                                      long fee,
-                                     long timestamp) {
+                                     long timestamp, String ownerPublicKey) {
         super(inputRegularBoxIds, inputRegularBoxProofs, outputRegularBoxesData, fee, timestamp);
         this.outputCarBoxData = outputCarBoxData;
+        this.ownerPublicKey = ownerPublicKey;
     }
 
     // Specify the unique custom transaction id.
@@ -56,6 +60,11 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
             newBoxes = new ArrayList<>(super.newBoxes());
             long nonce = getNewBoxNonce(outputCarBoxData.proposition(), newBoxes.size());
             newBoxes.add((NoncedBox) new CarBox(outputCarBoxData, nonce));
+
+            //Also add MTOBox with 0 balance
+            long nonce1 = getNewBoxNonce(outputCarBoxData.proposition(), newBoxes.size());
+            MTOBoxData tokenBoxData = new MTOBoxData(outputCarBoxData.proposition(), ownerPublicKey, 0);
+            newBoxes.add((NoncedBox) new MTOBox(tokenBoxData, nonce));
         }
         return Collections.unmodifiableList(newBoxes);
     }
@@ -75,6 +84,8 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
 
         byte[] outputCarBoxDataBytes = outputCarBoxData.bytes();
 
+        byte[] ownerPublicKeyBytes = ownerPublicKey.getBytes();
+
         return Bytes.concat(
                 Longs.toByteArray(fee()),                               // 8 bytes
                 Longs.toByteArray(timestamp()),                         // 8 bytes
@@ -85,7 +96,9 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
                 Ints.toByteArray(outputRegularBoxesDataBytes.length),   // 4 bytes
                 outputRegularBoxesDataBytes,                            // depends on previous value (>=4 bytes)
                 Ints.toByteArray(outputCarBoxDataBytes.length),         // 4 bytes
-                outputCarBoxDataBytes                                   // depends on previous value (>=4 bytes)
+                outputCarBoxDataBytes,                                   // depends on previous value (>=4 bytes)
+                Ints.toByteArray(ownerPublicKeyBytes.length),
+                ownerPublicKeyBytes
         );
     }
 
@@ -126,8 +139,12 @@ public final class CarDeclarationTransaction extends AbstractRegularTransaction 
         offset += 4;
 
         CarBoxData outputCarBoxData = CarBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
 
-        return new CarDeclarationTransaction(inputRegularBoxIds, inputRegularBoxProofs, outputRegularBoxesData, outputCarBoxData, fee, timestamp);
+        batchSize = BytesUtils.getInt(bytes, offset);
+        String ownerPublicKey = new String(Arrays.copyOfRange(bytes, offset, offset+batchSize));
+
+        return new CarDeclarationTransaction(inputRegularBoxIds, inputRegularBoxProofs, outputRegularBoxesData, outputCarBoxData, fee, timestamp, ownerPublicKey);
     }
 
     // Set specific Serializer for CarDeclarationTransaction class.

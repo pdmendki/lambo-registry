@@ -4,7 +4,8 @@ package io.horizen.lambo.car.box.data;
 // Used during BoxData serializations.
 public enum CarRegistryBoxesDataIdsEnum {
     CarBoxDataId((byte)1),
-    CarSellOrderBoxDataId((byte)2);
+    CarSellOrderBoxDataId((byte)2),
+    MTOBoxDataId((byte)3);
 
     private final byte id;
 

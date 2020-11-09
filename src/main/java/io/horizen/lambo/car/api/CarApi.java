@@ -98,6 +98,8 @@ public class CarApi extends ApplicationApiGroup {
             PublicKey25519Proposition carOwnershipProposition = PublicKey25519PropositionSerializer.getSerializer()
                     .parseBytes(BytesUtils.fromHexString(ent.proposition));
 
+            String ownerPublicKey = ent.proposition;
+
             //check that the vin is unique (both in local veichle store and in mempool)
             if (! carInfoDBService.validateVin(ent.vin, Optional.of(view.getNodeMemoryPool()))){
                 throw new IllegalStateException("Vehicle identification number already present in blockchain");
@@ -153,7 +155,7 @@ public class CarApi extends ApplicationApiGroup {
                     regularOutputs,
                     carBoxData,
                     ent.fee,
-                    timestamp);
+                    timestamp, ownerPublicKey);
 
             // Get the Tx message to be signed.
             byte[] messageToSign = unsignedTransaction.messageToSign();
@@ -171,7 +173,7 @@ public class CarApi extends ApplicationApiGroup {
                     regularOutputs,
                     carBoxData,
                     ent.fee,
-                    timestamp);
+                    timestamp, ownerPublicKey);
 
             return new TxResponse(ByteUtils.toHexString(sidechainTransactionsCompanion.toBytes((BoxTransaction) signedTransaction)));
         }
