@@ -6,8 +6,8 @@ public class EarnMileageTokensRequest {
         this.proposition = proposition;
     }
 
-    public void setDrive(long drive) {
-        this.drive = drive;
+    public void setMileage(long mileage) {
+        this.mileage = mileage;
     }
 
     public void setFee(long fee) {
@@ -15,6 +15,6 @@ public class EarnMileageTokensRequest {
     }
 
     public String proposition;
-    public long drive;
+    public long mileage;
     public long fee;
 }

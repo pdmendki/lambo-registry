@@ -26,10 +26,7 @@ import io.horizen.lambo.car.box.data.CarSellOrderBoxDataSerializer;
 import io.horizen.lambo.car.box.data.MTOBoxDataSerializer;
 import io.horizen.lambo.car.proof.CarRegistryProofsIdsEnum;
 import io.horizen.lambo.car.proof.SellOrderSpendingProofSerializer;
-import io.horizen.lambo.car.transaction.BuyCarTransactionSerializer;
-import io.horizen.lambo.car.transaction.CarDeclarationTransactionSerializer;
-import io.horizen.lambo.car.transaction.CarRegistryTransactionsIdsEnum;
-import io.horizen.lambo.car.transaction.SellCarTransactionSerializer;
+import io.horizen.lambo.car.transaction.*;
 import com.horizen.proof.Proof;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.proposition.Proposition;
@@ -92,7 +89,7 @@ public class CarRegistryAppModule
         customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.CarDeclarationTransactionId.id(), (TransactionSerializer) CarDeclarationTransactionSerializer.getSerializer());
         customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.SellCarTransactionId.id(), (TransactionSerializer) SellCarTransactionSerializer.getSerializer());
         customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.BuyCarTransactionId.id(), (TransactionSerializer) BuyCarTransactionSerializer.getSerializer());
-        //customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.EarnTokenTransactionId.id(), (TransactionSerializer) BuyCarTransactionSerializer.getSerializer());
+        customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.EarnTokenTransactionId.id(), (TransactionSerializer) EarnTokenTransactionSerializer.getSerializer());
 
         // Create companions that will allow to serialize and deserialize any kind of core and custom types specified.
         SidechainBoxesDataCompanion sidechainBoxesDataCompanion = new SidechainBoxesDataCompanion(customBoxDataSerializers);

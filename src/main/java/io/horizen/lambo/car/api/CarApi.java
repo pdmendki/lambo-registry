@@ -98,8 +98,9 @@ public class CarApi extends ApplicationApiGroup {
             MTOBox mtoBox = null;
 
             for (Box b : view.getNodeWallet().boxesOfType(MTOBox.class)) {
-                if (Arrays.equals(b.id(), BytesUtils.fromHexString(ent.proposition)))
-                    mtoBox = (MTOBox) b;
+                MTOBox box = (MTOBox) b;
+                if (box.getId().equalsIgnoreCase(ent.proposition))
+                    mtoBox = box;
             }
 
             // Try to collect regular boxes to pay fee
@@ -145,7 +146,7 @@ public class CarApi extends ApplicationApiGroup {
                     mtoBox,
                     null,
                     mtoOwnershipProposition,
-                    ent.drive
+                    ent.mileage
                     );
 
             // Get the Tx message to be signed.
@@ -168,7 +169,7 @@ public class CarApi extends ApplicationApiGroup {
                     mtoBox,
                     (Signature25519)view.getNodeWallet().secretByPublicKey(mtoBox.proposition()).get().sign(messageToSign),
                     mtoOwnershipProposition,
-                    ent.drive);
+                    ent.mileage);
 
             return new TxResponse(ByteUtils.toHexString(sidechainTransactionsCompanion.toBytes((BoxTransaction) signedTransaction)));
         }
@@ -197,8 +198,9 @@ public class CarApi extends ApplicationApiGroup {
             MTOBoxData mtoBoxData = null;
 
             for (Box b : view.getNodeWallet().boxesOfType(MTOBox.class)) {
-                if (Arrays.equals(b.id(), BytesUtils.fromHexString(ent.proposition)))
-                    mtoBox = (MTOBox) b;
+                MTOBox box = (MTOBox) b;
+                if (box.getId().equalsIgnoreCase(ent.proposition))
+                    mtoBox = box;
             }
 
             if(null == mtoBox) {
