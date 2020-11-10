@@ -19,9 +19,11 @@ import io.horizen.lambo.car.api.CarApi;
 import io.horizen.lambo.car.box.CarBoxSerializer;
 import io.horizen.lambo.car.box.CarRegistryBoxesIdsEnum;
 import io.horizen.lambo.car.box.CarSellOrderBoxSerializer;
+import io.horizen.lambo.car.box.MTOBoxSerializer;
 import io.horizen.lambo.car.box.data.CarBoxDataSerializer;
 import io.horizen.lambo.car.box.data.CarRegistryBoxesDataIdsEnum;
 import io.horizen.lambo.car.box.data.CarSellOrderBoxDataSerializer;
+import io.horizen.lambo.car.box.data.MTOBoxDataSerializer;
 import io.horizen.lambo.car.proof.CarRegistryProofsIdsEnum;
 import io.horizen.lambo.car.proof.SellOrderSpendingProofSerializer;
 import io.horizen.lambo.car.transaction.BuyCarTransactionSerializer;
@@ -70,11 +72,13 @@ public class CarRegistryAppModule
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
         customBoxSerializers.put(CarRegistryBoxesIdsEnum.CarBoxId.id(), (BoxSerializer) CarBoxSerializer.getSerializer());
         customBoxSerializers.put(CarRegistryBoxesIdsEnum.CarSellOrderBoxId.id(), (BoxSerializer) CarSellOrderBoxSerializer.getSerializer());
+        customBoxSerializers.put(CarRegistryBoxesIdsEnum.MTOBoxId.id(), (BoxSerializer) MTOBoxSerializer.getSerializer());
 
         // Specify how to serialize custom BoxData.
         HashMap<Byte, NoncedBoxDataSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>>> customBoxDataSerializers = new HashMap<>();
         customBoxDataSerializers.put(CarRegistryBoxesDataIdsEnum.CarBoxDataId.id(), (NoncedBoxDataSerializer) CarBoxDataSerializer.getSerializer());
         customBoxDataSerializers.put(CarRegistryBoxesDataIdsEnum.CarSellOrderBoxDataId.id(), (NoncedBoxDataSerializer) CarSellOrderBoxDataSerializer.getSerializer());
+        customBoxDataSerializers.put(CarRegistryBoxesDataIdsEnum.MTOBoxDataId.id(), (NoncedBoxDataSerializer) MTOBoxDataSerializer.getSerializer());
 
         // No custom secrets for CarRegistry app.
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
@@ -88,6 +92,7 @@ public class CarRegistryAppModule
         customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.CarDeclarationTransactionId.id(), (TransactionSerializer) CarDeclarationTransactionSerializer.getSerializer());
         customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.SellCarTransactionId.id(), (TransactionSerializer) SellCarTransactionSerializer.getSerializer());
         customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.BuyCarTransactionId.id(), (TransactionSerializer) BuyCarTransactionSerializer.getSerializer());
+        //customTransactionSerializers.put(CarRegistryTransactionsIdsEnum.EarnTokenTransactionId.id(), (TransactionSerializer) BuyCarTransactionSerializer.getSerializer());
 
         // Create companions that will allow to serialize and deserialize any kind of core and custom types specified.
         SidechainBoxesDataCompanion sidechainBoxesDataCompanion = new SidechainBoxesDataCompanion(customBoxDataSerializers);
