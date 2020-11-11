@@ -25,6 +25,7 @@ import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import io.horizen.lambo.car.api.request.CreateCarBoxRequest;
 import io.horizen.lambo.car.api.request.CreateCarSellOrderRequest;
+import io.horizen.lambo.car.api.request.EarnMileageTokensRequest;
 import io.horizen.lambo.car.api.request.SpendCarSellOrderRequest;
 import io.horizen.lambo.car.box.CarBox;
 import io.horizen.lambo.car.box.CarSellOrderBox;
@@ -37,6 +38,7 @@ import io.horizen.lambo.car.proof.SellOrderSpendingProof;
 import io.horizen.lambo.car.services.CarInfoDBService;
 import io.horizen.lambo.car.transaction.BuyCarTransaction;
 import io.horizen.lambo.car.transaction.CarDeclarationTransaction;
+import io.horizen.lambo.car.transaction.EarnTokenTransaction;
 import io.horizen.lambo.car.transaction.SellCarTransaction;
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 import scala.Option;
@@ -84,7 +86,95 @@ public class CarApi extends ApplicationApiGroup {
         routes.add(bindPostRequest("createCarSellOrder", this::createCarSellOrder, CreateCarSellOrderRequest.class));
         routes.add(bindPostRequest("acceptCarSellOrder", this::acceptCarSellOrder, SpendCarSellOrderRequest.class));
         routes.add(bindPostRequest("cancelCarSellOrder", this::cancelCarSellOrder, SpendCarSellOrderRequest.class));
+        routes.add(bindPostRequest("driveCar", this::earnMTO, EarnMileageTokensRequest.class));
         return routes;
+    }
+
+    private ApiResponse earnMTO(SidechainNodeView view, EarnMileageTokensRequest ent) {
+        try{
+            PublicKey25519Proposition mtoOwnershipProposition = PublicKey25519PropositionSerializer.getSerializer()
+                    .parseBytes(BytesUtils.fromHexString(ent.proposition));
+
+            MTOBox mtoBox = null;
+
+            for (Box b : view.getNodeWallet().boxesOfType(MTOBox.class)) {
+                if (Arrays.equals(b.id(), BytesUtils.fromHexString(ent.proposition)))
+                    mtoBox = (MTOBox) b;
+            }
+
+            // Try to collect regular boxes to pay fee
+            List<Box<Proposition>> paymentBoxes = new ArrayList<>();
+            long amountToPay = ent.fee;
+            // Avoid to add boxes that are already spent in some Transaction that is present in node Mempool.
+            List<byte[]> boxIdsToExclude = boxesFromMempool(view.getNodeMemoryPool());
+            List<Box<Proposition>> regularBoxes = view.getNodeWallet().boxesOfType(RegularBox.class, boxIdsToExclude);
+            int index = 0;
+            while (amountToPay > 0 && index < regularBoxes.size()) {
+                paymentBoxes.add(regularBoxes.get(index));
+                amountToPay -= regularBoxes.get(index).value();
+                index++;
+            }
+
+            if (amountToPay > 0) {
+                throw new IllegalStateException("Not enough coins to pay the fee.");
+            }
+
+            // Set change if exists
+            long change = Math.abs(amountToPay);
+            List<RegularBoxData> regularOutputs = new ArrayList<>();
+            if (change > 0) {
+                regularOutputs.add(new RegularBoxData((PublicKey25519Proposition) paymentBoxes.get(0).proposition(), change));
+            }
+
+            List<byte[]> inputRegularBoxIds = new ArrayList<>();
+            for (Box b : paymentBoxes) {
+                inputRegularBoxIds.add(b.id());
+            }
+
+            // Create fake proofs to be able to create transaction to be signed.
+            List<Signature25519> fakeRegularInputProofs = Collections.nCopies(inputRegularBoxIds.size(), null);
+
+            Long timestamp = System.currentTimeMillis();
+
+            EarnTokenTransaction unsignedTransaction = new EarnTokenTransaction(
+                    inputRegularBoxIds,
+                    fakeRegularInputProofs,
+                    regularOutputs,
+                    ent.fee,
+                    timestamp,
+                    mtoBox,
+                    null,
+                    mtoOwnershipProposition,
+                    ent.drive
+                    );
+
+            // Get the Tx message to be signed.
+            byte[] messageToSign = unsignedTransaction.messageToSign();
+
+            // Create signatures.
+            List<Signature25519> regularInputProofs = new ArrayList<>();
+
+            for (Box<Proposition> box : paymentBoxes) {
+                regularInputProofs.add((Signature25519) view.getNodeWallet().secretByPublicKey(box.proposition()).get().sign(messageToSign));
+            }
+
+            // Create the resulting signed transaction.
+            EarnTokenTransaction signedTransaction = new EarnTokenTransaction(
+                    inputRegularBoxIds,
+                    regularInputProofs,
+                    regularOutputs,
+                    ent.fee,
+                    timestamp,
+                    mtoBox,
+                    (Signature25519)view.getNodeWallet().secretByPublicKey(mtoBox.proposition()).get().sign(messageToSign),
+                    mtoOwnershipProposition,
+                    ent.drive);
+
+            return new TxResponse(ByteUtils.toHexString(sidechainTransactionsCompanion.toBytes((BoxTransaction) signedTransaction)));
+        }
+        catch (Exception e) {
+            return new CarResponseError("0102", "Error during MTO token creation.", Some.apply(e));
+        }
     }
 
     /*

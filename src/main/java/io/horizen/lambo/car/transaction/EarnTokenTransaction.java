@@ -1,18 +1,28 @@
 package io.horizen.lambo.car.transaction;
 
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.data.RegularBoxData;
 import com.horizen.proof.Proof;
 import com.horizen.proof.Signature25519;
+import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.transaction.TransactionSerializer;
+import com.horizen.utils.BytesUtils;
 import io.horizen.lambo.car.box.CarSellOrderBox;
 import io.horizen.lambo.car.box.MTOBox;
 import io.horizen.lambo.car.box.data.MTOBoxData;
+import io.horizen.lambo.car.info.CarBuyOrderInfo;
+import scorex.core.NodeViewModifier$;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -76,9 +86,105 @@ public class EarnTokenTransaction extends AbstractRegularTransaction{
         }
         return Collections.unmodifiableList(newBoxes);
     }
+    // Define object serialization, that should serialize both parent class entries and CarBuyOrderInfo as well
+    @Override
+    public byte[] bytes() {
+        ByteArrayOutputStream inputsIdsStream = new ByteArrayOutputStream();
+        for(byte[] id: inputRegularBoxIds)
+            inputsIdsStream.write(id, 0, id.length);
+
+        byte[] inputRegularBoxIdsBytes = inputsIdsStream.toByteArray();
+
+        byte[] inputRegularBoxProofsBytes = regularBoxProofsSerializer.toBytes(inputRegularBoxProofs);
+
+        byte[] outputRegularBoxesDataBytes = regularBoxDataListSerializer.toBytes(outputRegularBoxesData);
+
+        byte[] inputMTOBoxBytes = tokenBox.bytes();
+
+        byte[] inputMTOBoxOwnershipProofBytes = tokenBoxOwnershipProof.bytes();
+
+        byte[] inputOwnerPropositionBytes = ownerProposition.bytes();
+
+        byte[] amountBytes = Longs.toByteArray(amount);
+
+        return Bytes.concat(
+                Longs.toByteArray(fee()),                               // 8 bytes
+                Longs.toByteArray(timestamp()),                         // 8 bytes
+                Ints.toByteArray(inputRegularBoxIdsBytes.length),       // 4 bytes
+                inputRegularBoxIdsBytes,                                // depends on previous value (>=4 bytes)
+                Ints.toByteArray(inputRegularBoxProofsBytes.length),    // 4 bytes
+                inputRegularBoxProofsBytes,                             // depends on previous value (>=4 bytes)
+                Ints.toByteArray(outputRegularBoxesDataBytes.length),   // 4 bytes
+                outputRegularBoxesDataBytes,                            // depends on previous value (>=4 bytes)
+                Ints.toByteArray(inputMTOBoxBytes.length),              // 4 bytes
+                inputMTOBoxBytes,                                       // depends on previous value (>=4 bytes)
+                Ints.toByteArray(inputMTOBoxOwnershipProofBytes.length),// 4 bytes
+                inputMTOBoxOwnershipProofBytes,
+                Ints.toByteArray(inputOwnerPropositionBytes.length),    // 4 bytes
+                inputOwnerPropositionBytes,
+                amountBytes                                             // 8 bytes
+        );
+    }
+
+    public static EarnTokenTransaction parseBytes(byte[] bytes) {
+        int offset = 0;
+
+        long fee = BytesUtils.getLong(bytes, offset);
+        offset += 8;
+
+        long timestamp = BytesUtils.getLong(bytes, offset);
+        offset += 8;
+
+        int batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        ArrayList<byte[]> inputRegularBoxIds = new ArrayList<>();
+        int idLength = NodeViewModifier$.MODULE$.ModifierIdSize();
+        while(batchSize > 0) {
+            inputRegularBoxIds.add(Arrays.copyOfRange(bytes, offset, offset + idLength));
+            offset += idLength;
+            batchSize -= idLength;
+        }
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        List<Signature25519> inputRegularBoxProofs = regularBoxProofsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        List<RegularBoxData> outputRegularBoxesData = regularBoxDataListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        MTOBox mtoBox = MTOBox.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        Signature25519 proof = Signature25519Serializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer()
+                .parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        long amount = BytesUtils.getLong(bytes, offset);
+
+        return new EarnTokenTransaction(inputRegularBoxIds, inputRegularBoxProofs, outputRegularBoxesData,
+                fee, timestamp, mtoBox, proof, proposition, amount);
+    }
 
     @Override
     public TransactionSerializer serializer() {
-        return null;
+        return EarnTokenTransactionSerializer.getSerializer();
     }
 }
