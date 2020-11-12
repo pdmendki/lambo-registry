@@ -16,6 +16,8 @@ import java.util.Arrays;
 import static io.horizen.lambo.car.box.CarRegistryBoxesIdsEnum.MTOBoxId;
 
 // Declare default JSON view for MTOBox object. Will automatically collect all getters except ignored ones.
+// New MTOBox will be created on declareCar if the account doesn't have mtoBox
+// TODO - add new MTOBox in buyCar transaction as well if account doesn't have any
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties({"mtoId", "value"})
 public class MTOBox extends AbstractNoncedBox<PublicKey25519Proposition, MTOBoxData, MTOBox> {

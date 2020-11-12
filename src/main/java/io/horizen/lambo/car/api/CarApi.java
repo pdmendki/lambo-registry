@@ -203,6 +203,7 @@ public class CarApi extends ApplicationApiGroup {
                     mtoBox = box;
             }
 
+            // TODO - handle the case when mtoBox is not null - Copy MTOBoxData from existing mtoBox
             if(null == mtoBox) {
                 mtoBoxData = new MTOBoxData(mtoOwnershipProposition, ent.proposition, 0);
             }
